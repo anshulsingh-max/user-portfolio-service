@@ -29,7 +29,6 @@ from apps.portfolio.apis.validators.user_portfolio import UserPortfolioParamsVal
     UserPortfolioQueryParamsValidator, UserPortfolioReqParamsValidator, UserPortfolioUpdateValidator, \
     UserPortfolioUpdateBySubscriptionIdValidator, UserPortfolioPositionParamsValidator, \
     UserPortfolioSummaryParamsValidator
-from apps.portfolio.services.user_portfolio_threshold import get_active_thresholds_for_user
 
 logger = logging.getLogger(__name__)
 
@@ -53,22 +52,14 @@ class UserPortfolioJTE(GenericAPIView):
             validator.is_valid(raise_exception=True)
             validated_data = validator.validated_data
             logger.info(f"user portfolio get api {validated_data = }")
-            thresholds = None
-            user_id = validated_data.get('user_id')
             ets=time.time()
-            logger.debug(f"user portfolio get api {user_id = } time taken for validation {ets-st}")
-            if user_id is not None:
-                et = time.time()
-                thresholds = get_active_thresholds_for_user(user_id)
-                logger.debug(f"got threshold in time {time.time()-et}s")
+            logger.debug(f"user portfolio get api time taken for validation {ets-st}")
             st=time.time()
             user_portfolios_query_set = get_user_portfoliosJTE(**validated_data)
             user_portfolios_query_set = list(user_portfolios_query_set)
             ets=time.time()
             logger.debug(f"time taken to get user portfolios {ets-st}s")
-            # read_ser = ReadUserPortfolioSerializerJTE(user_portfolios_query_set, many=True, context={"thresholds": thresholds})
-            # read_ser=read_ser.data
-            read_ser= ReadUserPortfolioNoSerializerJTE(user_portfolios_query_set,thresholds).data()
+            read_ser= ReadUserPortfolioNoSerializerJTE(user_portfolios_query_set).data()
             logger.debug(f"time taken to serialize user portfolios {time.time()-ets}s")
             return Response(read_ser)
         except Exception as exc:
@@ -115,12 +106,8 @@ class UserPortfolio(GenericAPIView):
             validator.is_valid(raise_exception=True)
             validated_data = validator.validated_data
             logger.info(f"user portfolio get api {validated_data = }")
-            thresholds = None
-            user_id = validated_data.get('user_id')
-            if user_id is not None:
-                thresholds = get_active_thresholds_for_user(user_id)
             user_portfolios_query_set = get_user_portfolios(**validated_data)
-            read_ser = ReadUserPortfolioSerializer(user_portfolios_query_set, many=True, context={"thresholds": thresholds})
+            read_ser = ReadUserPortfolioSerializer(user_portfolios_query_set, many=True)
             return Response(read_ser.data)
         except Exception as exc:
             logger.info(f"exception occured while retrieving user portfolio")

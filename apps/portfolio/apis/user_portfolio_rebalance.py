@@ -9,7 +9,6 @@ from rest_framework import status
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
-from apps.alerts.services.user_portfolio_threshold import create_portfolio_profit_target_thresholds
 from apps.holdings.services.transaction import revert_cash_transaction
 from apps.portfolio.apis.schemas.user_portfolio_rebalance import user_portfolio_rebalance_request_schema_dict, \
     user_portfolio_rebalance_response_schema_dict, get_user_portfolio_rebalance_request_schema_dict, \
@@ -59,7 +58,6 @@ class AddUserPortfolioRebalance(GenericAPIView):
         if ser.is_valid(raise_exception=True) and not is_rebalance_active(validated_data['user_portfolio'],
                                                                           raise_exception=True):
             instance = ser.save()
-            create_portfolio_profit_target_thresholds(instance)
             return Response({"user_portfolio_rebalance_id": instance.id})
 
 

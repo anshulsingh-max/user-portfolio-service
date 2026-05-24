@@ -20,9 +20,12 @@ class UserPortfolio(TimeStampedModel):
     """
     class Meta:
         db_table = 'user_portfolio'
-        # constraints = [
-        #     UniqueConstraint(fields=['user_id', 'subscription_id', 'portfolio_id', 'status'], name='unique_user_subscription')
-        # ]
+        constraints = [
+            UniqueConstraint(
+                fields=['user_id', 'subscription_id', 'portfolio_id', 'status'],
+                name='unique_user_subscription',
+            ),
+        ]
 
     user_id = models.CharField(max_length=100, null=False)
     name = models.CharField(max_length=100, null=False)
@@ -58,9 +61,6 @@ class UserPortfolio(TimeStampedModel):
                 mainsum += holds.quantity * holds.avg_buy_price
         return mainsum
 
-        # return self.holdings.exclude(symbol=Asset.CASH.value).aggregate(total=Sum(F('quantity') *
-        #                                                                           F('avg_buy_price')))['total']
-
     @property
     def mtf_invested_amount(self):
         """
@@ -74,23 +74,6 @@ class UserPortfolio(TimeStampedModel):
         """
         if self.product_type != ProductTypes.MTF.value:
             return 0
-
-        # if self.strategy == Strategy.ONE_TIME.value:
-        #     # Lazy import to avoid circular dependencies
-        #     from apps.portfolio.models.user_instruction import UserInstruction
-        #     from apps.portfolio.constants import Side
-        #
-        #     first_rebalance = self.user_portfolio_rebalances.order_by("id").first()
-        #     if not first_rebalance:
-        #         return 0
-        #
-        #     total = (
-        #         UserInstruction.objects.filter(
-        #             portfolio_rebalance_transaction__portfolio_rebalance=first_rebalance,
-        #             side=Side.BUY.value,
-        #         ).aggregate(total=Sum("value"))["total"]
-        #     )
-        #     return total or 0
 
         # Use prefetched holdings to avoid additional queries
         total = sum(

@@ -16,9 +16,10 @@ from apps.portfolio.constants import (
     BrokerEnum,
     OrderCurrentStatus,
 )
+from apps.portfolio.models.mixins import TimestampStrMixin
 
 
-class Basket(TimeStampedModel):
+class Basket(TimestampStrMixin, TimeStampedModel):
     """
     A model representing a user's basket of financial instruments or trades.
 
@@ -37,7 +38,7 @@ class Basket(TimeStampedModel):
         profit_target_value (float, optional): The value of the target profit.
         basket_type (str, optional): The type of basket, selected from predefined choices.
         product_type (str, optional): The type of product associated with the basket, selected from predefined choices.
-        end_amount (str, float): Amount after the stocks are sold.
+        end_amount (Decimal, optional): Amount after the stocks are sold.
 
     Meta:
         db_table (str): The name of the database table for this model.
@@ -63,28 +64,12 @@ class Basket(TimeStampedModel):
     profit_target_2_value = models.FloatField(null=True, blank=True)
     basket_type = models.CharField(choices=BasketTypes.CHOICES.value, null=True)
     product_type = models.CharField(choices=ProductTypes.CHOICES.value, null=True)
-    end_amount = models.CharField(default=0.0)
+    end_amount = models.DecimalField(max_digits=20, decimal_places=4, null=True, blank=True)
     pt1_hit = models.BooleanField(null=True, blank=True)
     pt2_hit = models.BooleanField(null=True, blank=True)
     pt1_hit_time = models.DateTimeField(null=True, blank=True)
     pt2_hit_time = models.DateTimeField(null=True, blank=True)
     last_notification_sent = models.DateTimeField(null=True, blank=True)
-
-    @property
-    def created_str(self) -> str:
-        """
-        Returns an ISO 8601 string representation of the created datetime.
-        Format: 'YYYY-MM-DDTHH:MM:SSZ'
-        """
-        return self.created.isoformat() if self.created else ""
-
-    @property
-    def modified_str(self) -> str:
-        """
-        Returns an ISO 8601 string representation of the modified datetime.
-        Format: 'YYYY-MM-DDTHH:MM:SSZ'
-        """
-        return self.modified.isoformat() if self.modified else ""
 
     @property
     def exposure_amount(self) -> float:

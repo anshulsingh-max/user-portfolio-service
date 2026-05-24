@@ -1,2 +1,0 @@
-from apps.alerts.tasks.loss_limit_updated_notification import send_loss_limit_updated_notification
-from apps.alerts.tasks.profit_stop_loss_monitoring import scheduler_portfolio_monitoring, monitor_portfolio_alerts

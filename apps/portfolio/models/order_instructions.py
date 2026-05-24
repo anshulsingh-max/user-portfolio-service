@@ -2,9 +2,10 @@ from django.db import models
 from django_extensions.db.models import TimeStampedModel
 from apps.portfolio.constants import Side, OrderStatus, OrderInstructionSources
 from apps.portfolio.models import Order
+from apps.portfolio.models.mixins import TimestampStrMixin
 
 
-class OrderInstruction(TimeStampedModel):
+class OrderInstruction(TimestampStrMixin, TimeStampedModel):
     """
     A model representing detailed instructions for an individual order.
 
@@ -32,6 +33,9 @@ class OrderInstruction(TimeStampedModel):
 
     order = models.ForeignKey(Order, related_name="user_order", on_delete=models.CASCADE)
     trade_placement_id = models.IntegerField(null=True, unique=True)
+    # order_tag uniqueness: NOT unique on OrderInstruction (Flow B / basket),
+    # contrast UserInstruction.order_tag which IS unique (Flow A / rebalance).
+    # Open decision §13.3.2 of the unification plan — align before Phase 2.
     order_tag = models.CharField(null=False, max_length=50)
     symbol = models.CharField(max_length=30, null=False)
     quantity = models.FloatField()
@@ -44,19 +48,3 @@ class OrderInstruction(TimeStampedModel):
     value = models.FloatField(null=True)
     status = models.CharField(max_length=20, default=OrderStatus.WAITING.value, choices=OrderStatus.CHOICES.value)
     reason = models.TextField(null=True, blank=True, default="")
-
-    @property
-    def created_str(self) -> str:
-        """
-        Returns an ISO 8601 string representation of the created datetime.
-        Format: 'YYYY-MM-DDTHH:MM:SSZ'
-        """
-        return self.created.isoformat() if self.created else ""
-
-    @property
-    def modified_str(self) -> str:
-        """
-        Returns an ISO 8601 string representation of the modified datetime.
-        Format: 'YYYY-MM-DDTHH:MM:SSZ'
-        """
-        return self.modified.isoformat() if self.modified else ""

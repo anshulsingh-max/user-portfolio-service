@@ -7,7 +7,7 @@ import uuid
 
 import requests
 from django.conf import settings
-from django.utils.datetime_safe import datetime
+from datetime import datetime
 
 from apps.exceptions.user_instructions import OrderAlreadyExecuted
 from apps.portfolio.constants import OrderStatus, RebalanceTransactionStates, BUSINESS_REBALANCE_CALLBACK_URL, \
@@ -70,7 +70,9 @@ def update_trade_details(trade_details):
     user_inst_obj.retry_allowed = trade_details["retry_allowed"]
     user_inst_obj.price = trade_details.get('price')
     user_inst_obj.save()
-    logger.info(f"Saved User Instructions from callback {UserInstructionSerializer(instance=user_inst_obj).data}, {user_inst_obj.retry_allowed = } ")
+    logger.info(
+        f"Saved User Instructions from callback {UserInstructionSerializer(instance=user_inst_obj).data}, "
+        f"{user_inst_obj.retry_allowed = } ")
 
 
 def trade_already_filled(user_inst_obj):
@@ -165,14 +167,14 @@ def business_rebalance_sell_callback(user_portfolio_rebalance_id, rebalance_tran
             logger.info(f"Callback already registered for {user_portfolio_rebalance_id = } and {phase = }")
 
 
-
 def user_portfolio_business_event_callback(event_details):
     logger.info(f"In user_portfolio_business_event_callback {event_details = }")
-    callback_response = requests.post(f"{settings.USER_PORTFOLIO_BUSINESS_URL}/user-portfolio/event", data=json.dumps(event_details),
+    callback_response = requests.post(f"{settings.USER_PORTFOLIO_BUSINESS_URL}/user-portfolio/event",
+                                      data=json.dumps(event_details),
                                       headers={
-        'Content-Type': 'application/json',
-        'X-Tenant-ID': get_current_tenant()
-    })
+                                          'Content-Type': 'application/json',
+                                          'X-Tenant-ID': get_current_tenant()
+                                      })
     logger.info(f"user_portfolio_business_event_callback {callback_response.json() =}")
     if callback_response.status_code != 200:
         return callback_response.json(), False

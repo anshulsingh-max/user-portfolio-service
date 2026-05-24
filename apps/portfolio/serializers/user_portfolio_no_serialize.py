@@ -2,43 +2,13 @@ import json
 import logging
 import re
 
-from apps.portfolio.constants import CashTransaction, RebalanceTypes, RebalanceTransactionStates, ProductTypes, Strategy, Side, USER_PORTFOLIO
+from apps.portfolio.constants import CashTransaction, RebalanceTypes, RebalanceTransactionStates, ProductTypes, Strategy, Side
 from apps.portfolio.models.user_portfolio import UserPortfolio
-from apps.alerts.models import UserPortfolioThreshold
-from apps.alerts.constants import Status, PortfolioThresholdTypes
 from apps.portfolio.serializers.portfolio_rebalance_transaction import ReadPortfolioRebalanceTransactionSerializer
 from apps.portfolio.serializers.user_portfolio_rebalance import ReadUserPortfolioRebalanceSerializer
 from apps.portfolio.services.user_portfolio import create_latest_rebalance_dict
 
 logger = logging.getLogger(__name__)
-
-class UserPortfolioThresholdReadNoSerializer(object):
-    def __init__(self, user_portfolio_threshold_query_set):
-        self.user_portfolio_threshold_query_set = user_portfolio_threshold_query_set
-
-    def data(self):
-
-        upt = self.user_portfolio_threshold_query_set
-        upt_dict = {
-                "id": upt.id,
-                "portfolio_type": upt.portfolio_type,
-                "portfolio_id": upt.portfolio_id,
-                "side": upt.side,
-                "threshold_type": upt.threshold_type,
-                "target_pct": upt.target_pct,
-                "target_value": upt.target_value,
-                "status": upt.status,
-                "source": upt.source,
-                "source_id": upt.source_id,
-                "effective_from": upt.effective_from,
-                "effective_to": upt.effective_to,
-                "reason": upt.reason,
-                "created": upt.created,
-                "modified": upt.modified,
-            }
-
-
-        return upt_dict
 
 class ReadUserInstructionNoSerializer(object):
     def __init__(self, user_instructions_query_set):
@@ -123,51 +93,8 @@ class ReadUserPortfolioRebalanceNoSerializer(object):
         return res
 
 class ReadUserPortfolioNoSerializerJTE(object):
-    def __init__(self, user_portfolios_query_set:list,thresholds:list):
+    def __init__(self, user_portfolios_query_set: list):
         self.user_portfolios_query_set = user_portfolios_query_set
-        self.thresholds = thresholds
-
-    def get_user_portfolio_threshold(self, obj):
-        """
-        Return details of the related ACTIVE user portfolio threshold (Profit Target),
-        with `target_pct` renamed to `profit_target_1`.
-        """
-        try:
-            thresholds = self.thresholds
-            # Filter thresholds in Python to avoid extra query
-            if thresholds:
-                matching_thresholds = [
-                    t for t in thresholds
-                    if (t.portfolio_type == USER_PORTFOLIO and
-                        t.portfolio_id == str(obj.id) and
-                        t.status == Status.ACTIVE and
-                        t.threshold_type == PortfolioThresholdTypes.PROFIT_TARGET)
-                ]
-            else:
-                matching_thresholds = (
-                    UserPortfolioThreshold.objects
-                    .filter(
-                        portfolio_type=USER_PORTFOLIO,
-                        portfolio_id=str(obj.id),
-                        status=Status.ACTIVE,
-                        threshold_type=PortfolioThresholdTypes.PROFIT_TARGET,
-                    )
-                    .order_by('-effective_from', '-id')
-                )
-
-
-            if not matching_thresholds:
-                return {}
-
-            # Sort by effective_from (desc), then id (desc) to match order_by behavior
-            threshold = max(matching_thresholds, key=lambda t: (t.effective_from, t.id))
-
-            data = UserPortfolioThresholdReadNoSerializer(threshold).data()
-            return data
-        except Exception as exc:
-            logger.info("Error fetching active user portfolio threshold for portfolio %s", obj.id)
-            logger.exception(exc)
-            return {}
 
     def get_sell_instructions(self, portfolio):
         """
@@ -361,7 +288,6 @@ class ReadUserPortfolioNoSerializerJTE(object):
                 "investment_date": up.investment_date,
                 "mtf_invested_amount": up.mtf_invested_amount,
                 "average_leverage": up.average_leverage,
-                "user_portfolio_threshold": self.get_user_portfolio_threshold(up),
                 "holdings": self.get_holdings(up),
                 "rebalances":self.get_rebalances(up)
             }

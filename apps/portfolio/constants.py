@@ -302,6 +302,7 @@ class OrderCurrentStatus(Enum):
         (SKIP, SKIP)
     )
 
+
 class PhaseCallbackLogEnum(Enum):
     """
     Enum representing the possible states of a phase callback log.

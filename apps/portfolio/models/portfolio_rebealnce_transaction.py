@@ -21,8 +21,8 @@ class PortfolioRebalanceTransaction(TimeStampedModel):
 
     portfolio_rebalance = models.ForeignKey(UserPortfolioRebalance, related_name="portfolio_rebalance_transactions",
                                             on_delete=models.CASCADE)
-    allocation_quantity = models.JSONField(verbose_name="UserAllocationQuantity", default={})
-    user_rebalance_json = models.JSONField(verbose_name="UserRebalanceJson", default={})
+    allocation_quantity = models.JSONField(verbose_name="UserAllocationQuantity", default=dict)
+    user_rebalance_json = models.JSONField(verbose_name="UserRebalanceJson", default=dict)
     type = models.CharField(max_length=20, choices=RebalanceTransactionTypes.CHOICES.value,
                             default=RebalanceTransactionTypes.INITIAL.value)
     current_state = models.CharField(max_length=50, choices=RebalanceTransactionStates.CHOICES.value,

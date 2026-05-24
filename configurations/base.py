@@ -47,10 +47,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'apps.portfolio',
+    'apps.lifecycle',
     'apps.holdings',
-    'apps.alerts',
     'health_check',
-    'health_check.cache',
     'simple_history',
     'django_extensions'
 ]
@@ -112,7 +111,7 @@ WSGI_APPLICATION = 'user_portfolio.wsgi.application'
 
 TENANT_DATABASES = {
     # "demo": {
-    #     "ENGINE": 'django.db.backends.postgresql_psycopg2',
+    #     "ENGINE": 'django.db.backends.postgresql',
     #     "NAME": os.environ.get("DEMO_USER_PORTFOLIO_DB_NAME", ""),
     #     "USER": os.environ.get("DEMO_USER_PORTFOLIO_DB_USER", ""),
     #     "PASSWORD": os.environ.get("DEMO_USER_PORTFOLIO_DB_PASSWORD", ""),
@@ -120,7 +119,7 @@ TENANT_DATABASES = {
     #     "PORT": os.environ.get("DEMO_USER_PORTFOLIO_DB_PORT", "")
     # },
     # "hdfc": {
-    #     "ENGINE": 'django.db.backends.postgresql_psycopg2',
+    #     "ENGINE": 'django.db.backends.postgresql',
     #     "NAME": os.environ.get("HDFC_DB_NAME", ""),
     #     "USER": os.environ.get("HDFC_DB_USER", ""),
     #     "PASSWORD": os.environ.get("HDFC_DB_PASSWORD", ""),
@@ -128,7 +127,7 @@ TENANT_DATABASES = {
     #     "PORT": os.environ.get("HDFC_DB_PORT", "")
     # },
     # "hdfcir": {
-    #     "ENGINE": 'django.db.backends.postgresql_psycopg2',
+    #     "ENGINE": 'django.db.backends.postgresql',
     #     "NAME": os.environ.get("HDFCIR_DB_NAME", ""),
     #     "USER": os.environ.get("HDFCIR_DB_USER", ""),
     #     "PASSWORD": os.environ.get("HDFCIR_DB_PASSWORD", ""),
@@ -136,7 +135,7 @@ TENANT_DATABASES = {
     #     "PORT": os.environ.get("HDFCIR_DB_PORT", "")
     # },
     "ysl": {
-        "ENGINE": 'django.db.backends.postgresql_psycopg2',
+        "ENGINE": 'django.db.backends.postgresql',
         "NAME": os.environ.get("YSL_DB_NAME", ""),
         "USER": os.environ.get("YSL_DB_USER", ""),
         "PASSWORD": os.environ.get("YSL_DB_PASSWORD", ""),
@@ -147,7 +146,7 @@ TENANT_DATABASES = {
 
 DATABASES = {
     'default': {
-        "ENGINE": 'django.db.backends.postgresql_psycopg2',
+        "ENGINE": 'django.db.backends.postgresql',
         "NAME": os.environ.get("USER_PORTFOLIO_DB_NAME"),
         "USER": os.environ.get("USER_PORTFOLIO_DB_USER"),
         "PASSWORD": os.environ.get("USER_PORTFOLIO_DB_PASSWORD"),
@@ -285,6 +284,14 @@ LOGGING = {
             'handlers': ['worker', 'console'],
             'level': 'INFO',
         },
+        # Phase 0 / D2 — dedicated logger for lifecycle state changes
+        # and callbacks. Phase 1's TransitionService emits structured
+        # JSON payloads here via apps.lifecycle.state_logging.
+        'apps.lifecycle.state': {
+            'handlers': ['console', 'application'],
+            'level': 'INFO',
+            'propagate': False,
+        },
         'apps': {
             'handlers': ['console', 'application'],
             'level': 'INFO',
@@ -318,15 +325,8 @@ PHASE_DETAIL_CALLBACK = 'phase_detail_callback'
 MONITORING = 'monitoring'
 MONITOR_BASKET = 'monitor_basket'
 MONITOR_ORDER = 'monitor_order'
-SCHEDULER_PORTFOLIO_MONITORING = 'scheduler_portfolio_monitoring'
-SCHEDULER_PORTFOLIO_MONITORING_ = 'scheduler_portfolio_monitoring_'
-MONITOR_PORTFOLIO_ALERTS = 'monitor_portfolio_alerts'
-SCHEDULER_HOLDING_MONITORING = 'scheduler_holding_monitoring'
-SCHEDULER_HOLDING_MONITORING_ = 'scheduler_holding_monitoring_'
-MONITOR_HOLDING_THRESHOLD_ALERTS = 'monitor_holding_threshold_alerts'
 SEND_INVESTMENT_SUCCEEDED_EVENT = 'send_investment_succeeded_event'
 SEND_WITHDRAWAL_SUCCEEDED_EVENT = 'send_withdrawal_succeeded_event'
-SEND_LOSS_LIMIT_UPDATED_NOTIFICATION = 'send_loss_limit_updated_notification'
 
 # Celery queues
 PHASE_DETAIL_CALLBACK_QUEUE = f"{APP_NAME}_{PHASE_DETAIL_CALLBACK}_{prefix}"
@@ -352,31 +352,10 @@ CELERY_ROUTES = {
     MONITOR_ORDER: {
         'queue': MONITORING_QUEUE
     },
-    SCHEDULER_PORTFOLIO_MONITORING: {
-        'queue': MONITORING_QUEUE
-    },
-    SCHEDULER_PORTFOLIO_MONITORING_:{
-        'queue': MONITORING_QUEUE
-    },
-    MONITOR_PORTFOLIO_ALERTS: {
-        'queue': MONITORING_QUEUE
-    },
-    SCHEDULER_HOLDING_MONITORING: {
-        'queue': MONITORING_QUEUE
-    },
-    SCHEDULER_HOLDING_MONITORING_: {
-        'queue': MONITORING_QUEUE
-    },
-    MONITOR_HOLDING_THRESHOLD_ALERTS: {
-        'queue': MONITORING_QUEUE
-    },
     SEND_INVESTMENT_SUCCEEDED_EVENT: {
         'queue': MONITORING_QUEUE
     },
     SEND_WITHDRAWAL_SUCCEEDED_EVENT: {
-        'queue': MONITORING_QUEUE
-    },
-    SEND_LOSS_LIMIT_UPDATED_NOTIFICATION: {
         'queue': MONITORING_QUEUE
     }
 }
@@ -428,6 +407,8 @@ ENABLE_METRICS = os.getenv("ENABLE_METRICS", "0").lower() in {"1", "true", "yes"
 PROMETHEUS_METRICS_USERNAME = os.environ.get('PROMETHEUS_METRICS_USERNAME', '')
 PROMETHEUS_METRICS_PASSWORD = os.environ.get('PROMETHEUS_METRICS_PASSWORD', '')
 REBALANCE_BUSINESS_SERVICE_API_KEY=os.environ.get("REBALANCE_BUSINESS_SERVICE_API_KEY", "")
+
+
 def integrate_metrics():
     global ENABLE_METRICS
     global INSTALLED_APPS
