@@ -32,7 +32,7 @@ USER_PORTFOLIO_BUSINESS_URL = "https://user-portfolio-business-service-dev.bridg
 
 TENANT_DATABASES = {
     "demo": {
-        "ENGINE": 'django.db.backends.postgresql_psycopg2',
+        "ENGINE": 'django.db.backends.postgresql',
         "NAME": os.environ.get("DEMO_USER_PORTFOLIO_DB_NAME", ""),
         "USER": os.environ.get("DEMO_USER_PORTFOLIO_DB_USER", ""),
         "PASSWORD": os.environ.get("DEMO_USER_PORTFOLIO_DB_PASSWORD", ""),
@@ -40,7 +40,7 @@ TENANT_DATABASES = {
         "PORT": os.environ.get("DEMO_USER_PORTFOLIO_DB_PORT", "")
     },
     "ysl": {
-        "ENGINE": 'django.db.backends.postgresql_psycopg2',
+        "ENGINE": 'django.db.backends.postgresql',
         "NAME": os.environ.get("YSL_DB_NAME", ""),
         "USER": os.environ.get("YSL_DB_USER", ""),
         "PASSWORD": os.environ.get("YSL_DB_PASSWORD", ""),
@@ -51,7 +51,7 @@ TENANT_DATABASES = {
 
 DATABASES = {
     'default': {
-        "ENGINE": 'django.db.backends.postgresql_psycopg2',
+        "ENGINE": 'django.db.backends.postgresql',
         "NAME": os.environ.get("USER_PORTFOLIO_DB_NAME"),
         "USER": os.environ.get("USER_PORTFOLIO_DB_USER"),
         "PASSWORD": os.environ.get("USER_PORTFOLIO_DB_PASSWORD"),

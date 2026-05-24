@@ -49,7 +49,6 @@ INSTALLED_APPS = [
     'apps.portfolio',
     'apps.holdings',
     'health_check',
-    'health_check.cache',
     'simple_history',
     'django_extensions'
 ]
@@ -111,7 +110,7 @@ WSGI_APPLICATION = 'user_portfolio.wsgi.application'
 
 TENANT_DATABASES = {
     # "demo": {
-    #     "ENGINE": 'django.db.backends.postgresql_psycopg2',
+    #     "ENGINE": 'django.db.backends.postgresql',
     #     "NAME": os.environ.get("DEMO_USER_PORTFOLIO_DB_NAME", ""),
     #     "USER": os.environ.get("DEMO_USER_PORTFOLIO_DB_USER", ""),
     #     "PASSWORD": os.environ.get("DEMO_USER_PORTFOLIO_DB_PASSWORD", ""),
@@ -119,7 +118,7 @@ TENANT_DATABASES = {
     #     "PORT": os.environ.get("DEMO_USER_PORTFOLIO_DB_PORT", "")
     # },
     # "hdfc": {
-    #     "ENGINE": 'django.db.backends.postgresql_psycopg2',
+    #     "ENGINE": 'django.db.backends.postgresql',
     #     "NAME": os.environ.get("HDFC_DB_NAME", ""),
     #     "USER": os.environ.get("HDFC_DB_USER", ""),
     #     "PASSWORD": os.environ.get("HDFC_DB_PASSWORD", ""),
@@ -127,7 +126,7 @@ TENANT_DATABASES = {
     #     "PORT": os.environ.get("HDFC_DB_PORT", "")
     # },
     # "hdfcir": {
-    #     "ENGINE": 'django.db.backends.postgresql_psycopg2',
+    #     "ENGINE": 'django.db.backends.postgresql',
     #     "NAME": os.environ.get("HDFCIR_DB_NAME", ""),
     #     "USER": os.environ.get("HDFCIR_DB_USER", ""),
     #     "PASSWORD": os.environ.get("HDFCIR_DB_PASSWORD", ""),
@@ -135,7 +134,7 @@ TENANT_DATABASES = {
     #     "PORT": os.environ.get("HDFCIR_DB_PORT", "")
     # },
     "ysl": {
-        "ENGINE": 'django.db.backends.postgresql_psycopg2',
+        "ENGINE": 'django.db.backends.postgresql',
         "NAME": os.environ.get("YSL_DB_NAME", ""),
         "USER": os.environ.get("YSL_DB_USER", ""),
         "PASSWORD": os.environ.get("YSL_DB_PASSWORD", ""),
@@ -146,7 +145,7 @@ TENANT_DATABASES = {
 
 DATABASES = {
     'default': {
-        "ENGINE": 'django.db.backends.postgresql_psycopg2',
+        "ENGINE": 'django.db.backends.postgresql',
         "NAME": os.environ.get("USER_PORTFOLIO_DB_NAME"),
         "USER": os.environ.get("USER_PORTFOLIO_DB_USER"),
         "PASSWORD": os.environ.get("USER_PORTFOLIO_DB_PASSWORD"),

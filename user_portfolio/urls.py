@@ -17,28 +17,9 @@ Including another URLconf
 from django.conf import settings
 from django.contrib import admin
 from django.urls import path, include, re_path, URLPattern
-from drf_yasg import openapi
-from drf_yasg.views import get_schema_view
-from rest_framework_swagger.views import get_swagger_view
+from health_check.views import HealthCheckView
 
 from multitenant.admin_site import tenant_admin_site
-from user_portfolio.swagger import HttpAndHttpsSchemaGenerator
-
-schema_view = get_swagger_view(title='Pastebin API')
-
-SchemaView = get_schema_view(
-    openapi.Info(
-      title="Snippets API",
-      default_version='0.0.2',
-      description="Swagger APIs",
-      terms_of_service="https://www.google.com/policies/terms/",
-      contact=openapi.Contact(email="contact@snippets.local"),
-      license=openapi.License(name="BSD License"),
-    ),
-    public=True,
-    generator_class=HttpAndHttpsSchemaGenerator,
-    url=settings.BASE_URL
-)
 
 
 urlpatterns = [
@@ -47,9 +28,14 @@ urlpatterns = [
     path(f'{settings.APP_PREFIX}/grappelli/', include('grappelli.urls')),
     path(f'{settings.APP_PREFIX}/holding/', include('apps.holdings.urls')),
     path(f'{settings.APP_PREFIX}/userportfolio/', include('apps.portfolio.urls')),
-    path(f'{settings.APP_PREFIX}/health_check/', include('health_check.urls')),
-    # path(f'{settings.APP_PREFIX}/swagger/', SchemaView.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    # re_path(f'{settings.APP_PREFIX}/redoc/', SchemaView.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    # django-health-check 4.x removed its bundled urls.py; register the
+    # view directly. Trailing slash preserved for backwards compatibility
+    # with existing monitors.
+    path(
+        f'{settings.APP_PREFIX}/health_check/',
+        HealthCheckView.as_view(),
+        name='health_check',
+    ),
 ]
 if settings.ENABLE_METRICS:
     from django_prometheus import exports

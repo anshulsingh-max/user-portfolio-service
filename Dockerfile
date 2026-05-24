@@ -1,4 +1,4 @@
-FROM python:3.10
+FROM python:3.14
 
 RUN mkdir -p /opt/services/user-portfolio-service/src
 ENV PYTHONDONTWRITEBYTECODE 1
