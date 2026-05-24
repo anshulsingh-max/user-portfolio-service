@@ -16,7 +16,7 @@ state) calls to record what happened. Every emission is:
 A module-level singleton named ``state_logger`` is provided for the
 common case::
 
-    from apps.portfolio.services.state_logging import state_logger
+    from apps.lifecycle.state_logging import state_logger
 
     state_logger.log_state_change(
         stage_type="phase",
@@ -46,7 +46,7 @@ except ImportError:  # pragma: no cover - non-Django invocation
     _request_local = None
 
 
-DEFAULT_LOGGER_NAME = "apps.portfolio.state"
+DEFAULT_LOGGER_NAME = "apps.lifecycle.state"
 _MISSING_VALUE = "-"
 
 
@@ -72,7 +72,7 @@ class StateLogger:
         """Bind this instance to a named :class:`logging.Logger`.
 
         :param logger_name: Dotted logger name. Defaults to
-            ``apps.portfolio.state`` which already has handlers wired
+            ``apps.lifecycle.state`` which already has handlers wired
             in ``configurations/base.py``.
         """
         self._logger = logging.getLogger(logger_name)

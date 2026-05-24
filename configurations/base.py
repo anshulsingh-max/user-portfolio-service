@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'apps.portfolio',
+    'apps.lifecycle',
     'apps.holdings',
     'health_check',
     'simple_history',
@@ -285,8 +286,8 @@ LOGGING = {
         },
         # Phase 0 / D2 — dedicated logger for lifecycle state changes
         # and callbacks. Phase 1's TransitionService emits structured
-        # JSON payloads here via apps.portfolio.services.state_logging.
-        'apps.portfolio.state': {
+        # JSON payloads here via apps.lifecycle.state_logging.
+        'apps.lifecycle.state': {
             'handlers': ['console', 'application'],
             'level': 'INFO',
             'propagate': False,

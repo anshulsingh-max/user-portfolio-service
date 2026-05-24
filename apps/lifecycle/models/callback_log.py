@@ -10,15 +10,17 @@ lifecycle row awaiting the callback. No FK — different stage_types live
 in different tables.
 """
 
+from __future__ import annotations
+
 from django.db import models
 from django_extensions.db.models import TimeStampedModel
 
-from apps.portfolio.constants import (
+from apps.lifecycle.constants import (
     CallbackDirection,
     CallbackLogStatus,
     CallbackStageType,
 )
-from apps.portfolio.models.mixins import TimestampStrMixin
+from apps.lifecycle.models.mixins import TimestampStrMixin
 
 
 class CallbackLog(TimestampStrMixin, TimeStampedModel):
@@ -162,7 +164,7 @@ class CallbackLog(TimestampStrMixin, TimeStampedModel):
 
     See also
     --------
-    * :mod:`apps.portfolio.services.state_logging` — emits the
+    * :mod:`apps.lifecycle.state_logging` — emits the
       structured log line Phase 1 will pair with each row written
       here (``log_callback``).
     * Plan §7.3 (schema), §7.4 (TransitionService contract),
