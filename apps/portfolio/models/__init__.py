@@ -9,4 +9,5 @@ from apps.portfolio.models.user_instruction import UserInstruction
 from apps.portfolio.models.basket import Basket
 from apps.portfolio.models.orders import Order
 from apps.portfolio.models.order_instructions import OrderInstruction
+from apps.portfolio.models.callback_log import CallbackLog
 

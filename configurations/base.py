@@ -284,6 +284,14 @@ LOGGING = {
             'handlers': ['worker', 'console'],
             'level': 'INFO',
         },
+        # Phase 0 / D2 — dedicated logger for lifecycle state changes
+        # and callbacks. Phase 1's TransitionService emits structured
+        # JSON payloads here via apps.portfolio.services.state_logging.
+        'apps.portfolio.state': {
+            'handlers': ['console', 'application'],
+            'level': 'INFO',
+            'propagate': False,
+        },
         'apps': {
             'handlers': ['console', 'application'],
             'level': 'INFO',
@@ -399,6 +407,8 @@ ENABLE_METRICS = os.getenv("ENABLE_METRICS", "0").lower() in {"1", "true", "yes"
 PROMETHEUS_METRICS_USERNAME = os.environ.get('PROMETHEUS_METRICS_USERNAME', '')
 PROMETHEUS_METRICS_PASSWORD = os.environ.get('PROMETHEUS_METRICS_PASSWORD', '')
 REBALANCE_BUSINESS_SERVICE_API_KEY=os.environ.get("REBALANCE_BUSINESS_SERVICE_API_KEY", "")
+
+
 def integrate_metrics():
     global ENABLE_METRICS
     global INSTALLED_APPS

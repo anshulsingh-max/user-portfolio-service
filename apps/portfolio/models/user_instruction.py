@@ -18,6 +18,9 @@ class UserInstruction(TimeStampedModel):
     portfolio_rebalance_transaction = models.ForeignKey(PortfolioRebalanceTransaction, related_name="user_instructions",
                                                  on_delete=models.CASCADE)
     trade_placement_id = models.IntegerField(null=True, unique=True)
+    # order_tag uniqueness: UNIQUE on UserInstruction (Flow A / rebalance),
+    # contrast OrderInstruction.order_tag which is NOT unique (Flow B / basket).
+    # Open decision §13.3.2 of the unification plan — align before Phase 2.
     order_tag = models.CharField(null=False, max_length=50, unique=True)
     symbol = models.CharField(max_length=30, null=False)
     quantity = models.FloatField()

@@ -302,6 +302,7 @@ class OrderCurrentStatus(Enum):
         (SKIP, SKIP)
     )
 
+
 class PhaseCallbackLogEnum(Enum):
     """
     Enum representing the possible states of a phase callback log.
@@ -314,6 +315,50 @@ class PhaseCallbackLogEnum(Enum):
         (PROCESSING, PROCESSING),
         (COMPLETED, COMPLETED),
         (FAILED, FAILED)
+    )
+
+
+class CallbackLogStatus(Enum):
+    """Status of a CallbackLog entry — same values as PhaseCallbackLogEnum."""
+    PROCESSING = 'processing'
+    COMPLETED = 'completed'
+    FAILED = 'failed'
+
+    CHOICES = (
+        (PROCESSING, PROCESSING),
+        (COMPLETED, COMPLETED),
+        (FAILED, FAILED),
+    )
+
+
+class CallbackDirection(Enum):
+    """Whether a callback came in to us or we sent it out."""
+    INBOUND = 'inbound'
+    OUTBOUND = 'outbound'
+
+    CHOICES = (
+        (INBOUND, INBOUND),
+        (OUTBOUND, OUTBOUND),
+    )
+
+
+class CallbackStageType(Enum):
+    """Which legacy lifecycle entity a CallbackLog row refers to.
+
+    Polymorphic reference used by the Phase 1 TransitionService (§7.4).
+    """
+    PORTFOLIO = 'portfolio'
+    REBALANCE_EVENT = 'rebalance_event'
+    PHASE = 'phase'
+    ORDER = 'order'
+    BASKET = 'basket'
+
+    CHOICES = (
+        (PORTFOLIO, PORTFOLIO),
+        (REBALANCE_EVENT, REBALANCE_EVENT),
+        (PHASE, PHASE),
+        (ORDER, ORDER),
+        (BASKET, BASKET),
     )
 
 

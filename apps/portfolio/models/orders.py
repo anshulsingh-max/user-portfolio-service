@@ -5,11 +5,12 @@ from django.db import models
 from django.db.models import Sum
 from django_extensions.db.models import TimeStampedModel
 from apps.portfolio.constants import OrderCurrentStatus, Side
-
+from apps.portfolio.models.mixins import TimestampStrMixin
 
 logger = logging.getLogger(__name__)
 
-class Order(TimeStampedModel):
+
+class Order(TimestampStrMixin, TimeStampedModel):
     """
     A model representing a financial order placed within a user's basket.
 
@@ -41,7 +42,7 @@ class Order(TimeStampedModel):
     current_status = models.CharField(max_length=20,
                                       default=OrderCurrentStatus.WAITING.value,
                                       choices=OrderCurrentStatus.CHOICES.value)
-    states = ArrayField(models.CharField(max_length=20), null=False, default=[])
+    states = ArrayField(models.CharField(max_length=20), null=False, default=list)
     initial_amount = models.FloatField(null=True)
     end_amount = models.FloatField(null=True, blank=True)
     stop_loss = models.FloatField(null=True)
@@ -56,22 +57,6 @@ class Order(TimeStampedModel):
             .aggregate(total=Sum("filled_quantity"))
             .get("total")
         )
-
-    @property
-    def created_str(self) -> str:
-        """
-        Returns an ISO 8601 string representation of the created datetime.
-        Format: 'YYYY-MM-DDTHH:MM:SSZ'
-        """
-        return self.created.isoformat() if self.created else ""
-
-    @property
-    def modified_str(self) -> str:
-        """
-        Returns an ISO 8601 string representation of the modified datetime.
-        Format: 'YYYY-MM-DDTHH:MM:SSZ'
-        """
-        return self.modified.isoformat() if self.modified else ""
 
     @property
     def buy_quantity(self) -> float:
