@@ -1,0 +1,141 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-portfolio-service
+  labels:
+    app: user-portfolio-service
+    service: user-portfolio-service
+spec:
+  ports:
+    - port: 8000
+      targetPort: 8000
+      name: http
+  selector:
+    app: user-portfolio-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-portfolio-service-nginx
+  labels:
+    app: user-portfolio-service-nginx
+    service: user-portfolio-service-nginx
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+  selector:
+    app: user-portfolio-service-nginx
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-portfolio-service
+  labels:
+    app: user-portfolio-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-portfolio-service
+  template:
+    metadata:
+      labels:
+        app: user-portfolio-service
+    spec:
+      containers:
+        - name: user-portfolio-service
+          image: 637423188463.dkr.ecr.ap-south-1.amazonaws.com/youtrade-prod:user-portfolio-service-prod-${CURR_VER}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          #securityContext:
+          #runAsUser: 1000
+          envFrom:
+          - secretRef:
+              name: user-portfolio-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-portfolio-service-beat
+  labels:
+    app: user-portfolio-service-beat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-portfolio-service-beat
+  template:
+    metadata:
+      labels:
+        app: user-portfolio-service-beat
+    spec:
+      containers:
+        - name: user-portfolio-service-beat
+          image: 637423188463.dkr.ecr.ap-south-1.amazonaws.com/youtrade-prod:user-portfolio-service-beat-prod-${CURR_VER}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          #securityContext:
+          #runAsUser: 1000
+          envFrom:
+          - secretRef:
+              name: user-portfolio-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-portfolio-service-worker
+  labels:
+    app: user-portfolio-service-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-portfolio-service-worker
+  template:
+    metadata:
+      labels:
+        app: user-portfolio-service-worker
+    spec:
+      containers:
+        - name: user-portfolio-service-worker
+          image: 637423188463.dkr.ecr.ap-south-1.amazonaws.com/youtrade-prod:user-portfolio-service-worker-prod-${CURR_VER}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          #securityContext:
+          #runAsUser: 1000
+          envFrom:
+          - secretRef:
+              name: user-portfolio-service
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-portfolio-service-nginx
+  labels:
+    app: user-portfolio-service-nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-portfolio-service-nginx
+  template:
+    metadata:
+      labels:
+        app: user-portfolio-service-nginx
+    spec:
+      containers:
+        - name: user-portfolio-service-nginx
+          image: 637423188463.dkr.ecr.ap-south-1.amazonaws.com/youtrade-prod:user-portfolio-service-nginx-prod-${CURR_VER}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          #securityContext:
+          #runAsUser: 1000
+          

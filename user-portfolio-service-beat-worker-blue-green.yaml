@@ -1,0 +1,28 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-portfolio-service-worker
+  labels:
+    app: user-portfolio-service-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-portfolio-service-worker
+  template:
+    metadata:
+      labels:
+        app: user-portfolio-service-worker
+    spec:
+      containers:
+        - name: user-portfolio-service-worker
+          image: 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-worker-uat-38
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          #securityContext:
+          #runAsUser: 1000
+          envFrom:
+          - secretRef:
+              name: user-portfolio-service

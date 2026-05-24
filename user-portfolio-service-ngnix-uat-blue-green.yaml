@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-portfolio-service-nginx-active
+  namespace: default
+spec:
+  selector:
+    app: user-portfolio-service-nginx
+    rollouts.kubernetes.io/rollout: user-portfolio-service-nginx
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-portfolio-service-nginx-preview
+  namespace: default
+spec:
+  selector:
+    app: user-portfolio-service-nginx
+    rollouts.kubernetes.io/rollout: user-portfolio-service-nginx
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: user-portfolio-service-nginx
+  namespace: default
+  labels:
+    app: user-portfolio-service-nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-portfolio-service-nginx
+      rollouts.kubernetes.io/rollout: user-portfolio-service-nginx
+  strategy:
+    blueGreen:
+      activeService: user-portfolio-service-nginx-active
+      previewService: user-portfolio-service-nginx-preview
+      autoPromotionEnabled: true
+      autoPromotionSeconds: 60
+  template:
+    metadata:
+      labels:
+        app: user-portfolio-service-nginx
+        rollouts.kubernetes.io/rollout: user-portfolio-service-nginx
+    spec:
+      containers:
+      - name: user-portfolio-service
+        image: 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-ngnix-uat-38
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        envFrom:
+        - secretRef:
+            name: user-portfolio-service

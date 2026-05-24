@@ -1,0 +1,21 @@
+[tool.pylint.MESSAGE_CONTROL]
+disable = """
+    line-too-long,
+    abstract-method,
+    no-member,
+    f-string-without-interpolation,
+    unused-argument,
+    consider-using-f-string,
+    too-few-public-methods,
+    logging-fstring-interpolation
+"""
+enable = "useless-suppression"
+
+[tool.pylint.REPORTS]
+reports="no"
+
+[tool.pylint.FORMAT]
+max-line-length="88"
+
+[tool.pylint.BASIC]
+good-names = "_,i,e,setUp,tearDown,maxDiff"

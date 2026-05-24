@@ -1,0 +1,59 @@
+pipeline {
+    agent any
+
+    environment {
+        CURR_VER = "${currentBuild.number}"
+        PRE_VER  = "${currentBuild.previousBuild.getNumber()}"
+    }
+
+
+    stages {
+
+      stage('Docker Build'){
+            steps {
+                sh "sudo docker build -t 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-nginx${env.CURR_VER} -f ./configurations/nginx/Dockerfile ."
+                sh "sudo docker build -t 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-${env.CURR_VER} -f Dockerfile ."
+                sh "sudo docker build -t 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-worker${env.CURR_VER} -f Dockerfileworker ."
+                sh "sudo docker build -t 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-beat${env.CURR_VER} -f Dockerfilebeat ."
+
+            }
+       }
+       stage('Clean Images') {
+            steps {
+                sh "echo \$(sudo docker rmi 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-${env.PRE_VER})"
+                sh "echo \$(sudo docker rmi 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-nginx${env.PRE_VER})"
+                sh "echo \$(sudo docker rmi 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-worker${env.PRE_VER})"
+                sh "echo \$(sudo docker rmi 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-beat${env.PRE_VER})"
+            }
+        }
+        stage('pushImage'){
+            steps {
+            sh "sudo aws ecr get-login-password --region ap-south-1 --profile crypto-super | sudo docker login --username AWS --password-stdin 891377240785.dkr.ecr.ap-south-1.amazonaws.com"
+            sh "sudo docker push 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-nginx${env.CURR_VER}"
+            sh "sudo docker push 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-${env.CURR_VER}"
+            sh "sudo docker push 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-worker${env.CURR_VER}"
+            sh "sudo docker push 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-beat${env.CURR_VER}"
+       }
+    }
+
+        stage('Run Image'){
+            steps {
+				sshagent(['crypto-dev']) {
+					sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 sudo docker rm -vf  user-portfolio-service || true "
+                    sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 sudo docker rm -vf  user-portfolio-service-nginx || true "
+                    sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 sudo docker rm -vf  user-portfolio-service-worker || true "
+                    sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 sudo docker rm -vf  user-portfolio-service-beat || true "
+                    sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 sudo docker rmi 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-${env.PRE_VER} || true "
+                    sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 sudo docker rmi 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-nginx${env.PRE_VER} || true "
+                    sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 sudo docker rmi 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-worker${env.PRE_VER} || true "
+                    sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 sudo docker rmi 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-beat${env.PRE_VER} || true "
+					sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 \"aws ecr get-login-password --region ap-south-1 | sudo docker login --username AWS --password-stdin 891377240785.dkr.ecr.ap-south-1.amazonaws.com && sudo docker pull 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-${env.CURR_VER} && sudo docker pull 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-nginx${env.CURR_VER} \" "			
+					sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 sudo docker run -d --restart=unless-stopped --network prometheus --name user-portfolio-service -p 52036:8000 --env-file /home/ubuntu/user-portfolio-service 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-${env.CURR_VER}"	
+    				sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 sudo docker run -d --restart=unless-stopped --network prometheus --name user-portfolio-service-nginx -p 52037:80 --env-file /home/ubuntu/user-portfolio-service 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-nginx${env.CURR_VER}"
+                    sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 sudo docker run -d --restart=unless-stopped --network prometheus --name user-portfolio-service-worker --env-file /home/ubuntu/user-portfolio-service 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-worker${env.CURR_VER}"
+                    sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 sudo docker run -d --restart=unless-stopped --network prometheus --name user-portfolio-service-beat --env-file /home/ubuntu/user-portfolio-service 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-beat${env.CURR_VER}"
+                    }
+   	    }
+    }
+    }
+    }

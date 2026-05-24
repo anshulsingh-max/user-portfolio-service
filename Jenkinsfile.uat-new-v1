@@ -1,0 +1,144 @@
+pipeline {
+    agent any
+
+    environment {
+        CURR_VER = "${currentBuild.number}"
+        PRE_VER = "${currentBuild.previousBuild.getNumber()}"
+        AWS_PROFILE = "crypto-super"
+        SERVICE_NAME = "user-portfolio-service"
+        SERVICE_NAME_WORKER = "user-portfolio-service-worker"
+        SERVICE_NAME_NGINX = "user-portfolio-service-nginx"
+        POSTGRES_USER = "myuser"
+        POSTGRES_PASSWORD = "mypassword"
+        POSTGRES_DB = "mydatabase"
+    }
+
+    stages {
+        stage('Setup PostgreSQL') {
+            steps {
+                script {
+                    def pgContainerName = "pg-test-container"
+                    def networkName = "test-net-${env.BUILD_ID}"
+
+                    // Create a Docker network
+                    sh "docker network create ${networkName}"
+
+                    // Start PostgreSQL container
+                    sh """
+                        docker run -d \
+                        --name ${pgContainerName} \
+                        --network ${networkName} \
+                        -e POSTGRES_USER=${POSTGRES_USER} \
+                        -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} \
+                        -e POSTGRES_DB=${POSTGRES_DB} \
+                        postgres:13
+                    """
+                }
+            }
+        }
+
+        stage('Run Tests inside Docker') {
+            steps {
+                script {
+                    def testContainerName = "test-container-${env.BUILD_ID}"
+                    def networkName = "test-net-${env.BUILD_ID}"
+                    def modifiedWorkspace = "${WORKSPACE}".replaceAll("/var/jenkins_home/workspace/", "/home/ubuntu/jenkins_home/workspace/")
+
+                    // Allow some time for PostgreSQL to initialize
+                    sh "sleep 30"
+
+                    // Run your test container
+                    sh """
+                        docker pull python:3.10
+                        docker run --rm \
+                        --name ${testContainerName} \
+                        --network ${networkName} \
+                        --env-file /var/jenkins_home/service-secrets/user-portfolio-service \
+                        -v ${modifiedWorkspace}:/app \
+                        -w /app python:3.10 /bin/sh -c "pip install --upgrade pip && pip install -r requirements.txt && coverage run --source='.' manage.py test && coverage html"
+                    """
+                }
+            }
+            post {
+                always {
+                    script {
+                        // Perform cleanup irrespective of the test outcome
+                        def pgContainerName = "pg-test-container"
+                        def networkName = "test-net-${env.BUILD_ID}"
+
+                        sh "docker rm -f ${pgContainerName}"
+                        sh "docker network rm ${networkName}"
+                    }
+                }
+                success {
+                    script {
+                        def reportContent = readFile('htmlcov/index.html')
+                        emailext (
+                            subject: "${SERVICE_NAME} tests were successful",
+                            body: """${reportContent}""",
+                            mimeType: 'text/html',
+                            to: 'prometheus@bridgeweave.com',
+                            attachmentsPattern: '**/htmlcov/index.html'
+                        )
+                    }
+                }
+
+                failure {
+                    script {
+                        def reportContent = readFile('htmlcov/index.html')
+                        emailext (
+                            subject: "${SERVICE_NAME} tests failed",
+                            body: """${reportContent}""",
+                            mimeType: 'text/html',
+                            to: 'prometheus@bridgeweave.com',
+                            attachmentsPattern: '**/htmlcov/index.html'
+                        )
+                    }
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
+            steps {
+                sh "sudo docker build -t 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME}-uat-${env.CURR_VER} -f Dockerfile ."
+                sh "sudo docker build -t 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME_WORKER}-uat-${env.CURR_VER} -f Dockerfileworker ."
+                sh "sudo docker build -t 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME_NGINX}-uat-${env.CURR_VER} -f ./configurations/nginx/Dockerfile ."
+                
+            }
+        }
+
+        stage('Clean Images') {
+            steps {
+                sh "echo \$(sudo docker rmi 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME}-uat-${env.PRE_VER})"
+                sh "echo \$(sudo docker rmi 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME_WORKER}-uat-${env.PRE_VER})"
+                sh "echo \$(sudo docker rmi 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME_NGINX}-uat-${env.PRE_VER})"
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                sh "sudo aws ecr get-login-password --region ap-south-1 --profile crypto-super | sudo docker login --username AWS --password-stdin 891377240785.dkr.ecr.ap-south-1.amazonaws.com"
+                sh "sudo docker push 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME}-uat-${env.CURR_VER}"
+                sh "sudo docker push 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME_WORKER}-uat-${env.CURR_VER}"
+                sh "sudo docker push 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME_NGINX}-uat-${env.CURR_VER}"
+            }
+        }
+
+        stage('Run Image'){
+            steps {
+				sshagent(['crypto-dev']) {
+					sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 sudo docker rm -vf  user-portfolio-service-uat || true "
+                    sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 sudo docker rm -vf  user-portfolio-service-worker-uat || true "
+                    sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 sudo docker rmi 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-uat-${env.PRE_VER} || true "
+                    sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 sudo docker rmi 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-worker-uat-${env.PRE_VER} || true "
+					sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 \"aws ecr get-login-password --region ap-south-1 | sudo docker login --username AWS --password-stdin 891377240785.dkr.ecr.ap-south-1.amazonaws.com && sudo docker pull 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-uat-${env.CURR_VER} \" "			
+					sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 sudo docker run -d --restart=unless-stopped --network prometheus --name user-portfolio-service-uat -p 52069:8000 --env-file /home/ubuntu/new-env/user-portfolio-service 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-uat-${env.CURR_VER}"	
+                    sh "ssh -o StrictHostKeyChecking=no ubuntu@10.3.4.214 sudo docker run -d --restart=unless-stopped --network prometheus --name user-portfolio-service-worker-uat --env-file /home/ubuntu/new-env/user-portfolio-service 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-worker-uat-${env.CURR_VER}"
+                    }
+   	    }
+    }
+    }
+    }

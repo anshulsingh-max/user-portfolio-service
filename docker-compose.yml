@@ -1,0 +1,61 @@
+version: "3"
+
+services:
+  postgres-user-portfolio:
+    image: postgres:latest
+    container_name: postgres-user-portfolio
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: user_portfolio
+    ports:
+      - 5432:5432
+    volumes:
+      - /data/pgdata/user_portfolio:/var/lib/postgresql/data
+    networks:
+      - user-portfolio
+
+  user-portfolio-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: user-portfolio-service
+    depends_on:
+      - postgres-user-portfolio
+    container_name: user-portfolio-service
+    tty: true
+    ports:
+      - 8000:8000
+    environment:
+      DJANGO_SETTINGS_MODULE: configurations.local
+      COLUMNS: 80
+      BASE_URL: "http://127.0.0.1/"
+      USER_PORTFOLIO_DB_NAME: "user_portfolio"
+      USER_PORTFOLIO_DB_USER: "postgres"
+      USER_PORTFOLIO_DB_PASSWORD: "123456"
+      USER_PORTFOLIO_DB_HOST: "postgres-user-portfolio"
+      USER_PORTFOLIO_DB_PORT: "5432"
+    networks:
+      - user-portfolio
+    restart: always
+    logging:
+      driver: syslog
+
+  nginx-user-portfolio:
+    build:
+      context: .
+      dockerfile: ./configurations/nginx/Dockerfile
+    image: nginx-user-portfolio
+    container_name: nginx-user-portfolio
+    ports:
+      - 80:80
+    depends_on:
+      - user-portfolio-service
+    networks:
+      - user-portfolio
+    restart: always
+
+# Define the "user-portfolio" network
+networks:
+  user-portfolio:

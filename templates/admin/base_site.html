@@ -1,0 +1,22 @@
+{% extends "admin/base.html" %}
+{% load i18n grp_tags %}
+{% load tenant_admin_tags %}
+{% block title %}
+    <span style="color: #4fb2d3;">{{ title }}</span> | {% get_site_title %}
+{% endblock %}
+
+{# Branding Block - optional customization #}
+{% block branding %}
+    {# Example: <div id="grp-branding"><img src="/static/images/logo.png" alt="Logo"></div> #}
+{% endblock %}
+
+{# Add the Home button to the top nav #}
+{% block nav-global %}
+    <div style="float: right; margin-right: 10px; line-height: 40px;">
+        <a href="{% base_url 'admin:index' %}"
+           style="color: #4fb2d3; font-weight: bold; text-decoration: none; padding: 0 10px;">
+            home
+        </a>
+    </div>
+    {{ block.super }}
+{% endblock %}

@@ -1,0 +1,65 @@
+# Service for active traffic
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-portfolio-service-active
+  namespace: default
+spec:
+  selector:
+    app: user-portfolio-service
+    rollouts.kubernetes.io/rollout: user-portfolio-service
+  ports:
+    - port: 8000
+      targetPort: 8000
+  type: ClusterIP
+---
+# Service for preview traffic
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-portfolio-service-preview
+  namespace: default
+spec:
+  selector:
+    app: user-portfolio-service
+    rollouts.kubernetes.io/rollout: user-portfolio-service
+  ports:
+    - port: 8000
+      targetPort: 8000
+  type: ClusterIP
+---
+# Now the Rollout can safely reference those services
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: user-portfolio-service
+  namespace: default
+  labels:
+    app: user-portfolio-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-portfolio-service
+      rollouts.kubernetes.io/rollout: user-portfolio-service
+  strategy:
+    blueGreen:
+      activeService: user-portfolio-service-active
+      previewService: user-portfolio-service-preview
+      autoPromotionEnabled: true
+      autoPromotionSeconds: 60
+  template:
+    metadata:
+      labels:
+        app: user-portfolio-service
+        rollouts.kubernetes.io/rollout: user-portfolio-service
+    spec:
+      containers:
+      - name: user-portfolio-service
+        image: 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-uat-38
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - secretRef:
+            name: user-portfolio-service

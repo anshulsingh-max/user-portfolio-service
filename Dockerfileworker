@@ -1,0 +1,13 @@
+FROM python:3.10
+
+RUN mkdir -p /opt/services/djangoapp/src
+ENV PYTHONDONTWRITEBYTECODE 1
+
+COPY requirements.txt /requirements.txt
+RUN pip install -r /requirements.txt
+
+COPY . /opt/services/djangoapp/src
+WORKDIR /opt/services/djangoapp/src
+
+
+CMD celery -A user_portfolio worker -l info --concurrency=8 --prefetch-multiplier=8

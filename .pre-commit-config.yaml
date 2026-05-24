@@ -1,0 +1,33 @@
+default_language_version:
+  # default language version for each language
+  python: python3.10
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.4.0
+    hooks:
+      # See https://pre-commit.com/hooks.html for more hooks
+      - id: check-ast
+      - id: check-case-conflict
+      - id: check-executables-have-shebangs
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: name-tests-test
+        args: [ "--django" ]
+      - id: trailing-whitespace
+
+  - repo: https://github.com/pycqa/pylint
+    rev: v2.15.9
+    hooks:
+      - id: pylint
+        language: system
+        exclude: "[a-zA-Z]*/(migrations)/(.)*"
+        args: [ "--load-plugins=pylint_django", "--django-settings-module=configurations.local"]
+
+  - repo: local
+    hooks:
+      - id: django-test
+        name: django-test
+        entry: python manage.py test
+        always_run: true
+        pass_filenames: false
+        language: system

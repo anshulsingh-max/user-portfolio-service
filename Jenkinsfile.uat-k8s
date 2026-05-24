@@ -1,0 +1,63 @@
+pipeline {
+    agent any
+
+    environment {
+        CURR_VER = "${currentBuild.number}"
+        PRE_VER = "${currentBuild.previousBuild.getNumber()}"
+        AWS_PROFILE = "crypto-super"
+        SERVICE_NAME = "user-portfolio-service"
+        SERVICE_NAME_WORKER = "user-portfolio-service-worker"
+        SERVICE_NAME_NGINX = "user-portfolio-service-nginx"
+        SERVICE_NAME_BEAT = "user-portfolio-service-beat"
+        POSTGRES_USER = "myuser"
+        POSTGRES_PASSWORD = "mypassword"
+        POSTGRES_DB = "mydatabase"
+    }
+
+    stages {
+        
+
+        stage('Docker Build') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
+            steps {
+                sh "sudo docker build -t 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME}-uat-${env.CURR_VER} -f Dockerfile ."
+                sh "sudo docker build -t 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME_WORKER}-uat-${env.CURR_VER} -f Dockerfileworker ."
+                sh "sudo docker build -t 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME_NGINX}-uat-${env.CURR_VER} -f ./configurations/nginx/Dockerfile ."
+                sh "sudo docker build -t 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME_BEAT}-uat-${env.CURR_VER} -f Dockerfilebeat ."
+                
+            }
+        }
+
+        stage('Clean Images') {
+            steps {
+                sh "echo \$(sudo docker rmi 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME}-uat-${env.PRE_VER})"
+                sh "echo \$(sudo docker rmi 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME_WORKER}-uat-${env.PRE_VER})"
+                sh "echo \$(sudo docker rmi 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME_NGINX}-uat-${env.PRE_VER})"
+                sh "echo \$(sudo docker rmi 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME_BEAT}-uat-${env.PRE_VER})"
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                sh "sudo aws ecr get-login-password --region ap-south-1 --profile crypto-super | sudo docker login --username AWS --password-stdin 891377240785.dkr.ecr.ap-south-1.amazonaws.com"
+                sh "sudo docker push 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME}-uat-${env.CURR_VER}"
+                sh "sudo docker push 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME_WORKER}-uat-${env.CURR_VER}"
+                sh "sudo docker push 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME_NGINX}-uat-${env.CURR_VER}"
+                sh "sudo docker push 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:${SERVICE_NAME_BEAT}-uat-${env.CURR_VER}"
+            }
+        }
+
+        stage('Run Image') {
+            steps {
+                sshagent(['crypto-dev']) {
+                    script {
+                        sh "aws eks --region ap-south-1 --profile youtrade-super update-kubeconfig --name intraday-youtrade"
+                        sh "envsubst < ${WORKSPACE}/user-portfolio-service-uat.yaml | kubectl apply -f -" 
+                    }
+                }
+            }
+        }
+    }
+}

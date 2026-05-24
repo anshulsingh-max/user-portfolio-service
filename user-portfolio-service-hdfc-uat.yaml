@@ -1,0 +1,114 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-portfolio-service-hdfc
+  labels:
+    app: user-portfolio-service-hdfc
+    service: user-portfolio-service-hdfc
+spec:
+  ports:
+    - port: 8000
+      targetPort: 8000
+      name: http
+  selector:
+    app: user-portfolio-service-hdfc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-portfolio-service-nginx-hdfc
+  labels:
+    app: user-portfolio-service-nginx-hdfc
+    service: user-portfolio-service-nginx-hdfc
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+  selector:
+    app: user-portfolio-service-nginx-hdfc
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-portfolio-service-hdfc
+  labels:
+    app: user-portfolio-service-hdfc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-portfolio-service-hdfc
+  template:
+    metadata:
+      labels:
+        app: user-portfolio-service-hdfc
+    spec:
+      containers:
+        - name: user-portfolio-service
+          image: 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-hdfc-uat-${CURR_VER}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          #securityContext:
+          #runAsUser: 1000
+          envFrom:
+          - secretRef:
+              name: user-portfolio-service
+              
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-portfolio-service-worker-hdfc
+  labels:
+    app: user-portfolio-service-worker-hdfc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-portfolio-service-worker-hdfc
+  template:
+    metadata:
+      labels:
+        app: user-portfolio-service-worker-hdfc
+    spec:
+      containers:
+        - name: user-portfolio-service-worker
+          image: 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-worker-hdfc-uat-${CURR_VER}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          #securityContext:
+          #runAsUser: 1000
+          envFrom:
+          - secretRef:
+              name: user-portfolio-service
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-portfolio-service-nginx-hdfc
+  labels:
+    app: user-portfolio-service-nginx-hdfc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-portfolio-service-nginx-hdfc
+  template:
+    metadata:
+      labels:
+        app: user-portfolio-service-nginx-hdfc
+    spec:
+      containers:
+        - name: user-portfolio-service-nginx
+          image: 891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat:user-portfolio-service-nginx-hdfc-uat-${CURR_VER}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          #securityContext:
+          #runAsUser: 1000
+          

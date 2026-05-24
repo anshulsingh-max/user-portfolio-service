@@ -1,0 +1,174 @@
+pipeline {
+    agent any
+
+    parameters {
+        booleanParam(name: 'RUN_TESTS', defaultValue: false, description: 'Run Test Cases')
+        booleanParam(name: 'RUN_SONAR', defaultValue: false, description: 'Run SonarQube Analysis')
+    }
+
+    environment {
+        CURR_VER = "${currentBuild.number}"
+        PRE_VER = "${currentBuild.previousBuild?.getNumber() ?: '0'}"
+        AWS_PROFILE = "crypto-super"
+        SERVICE_NAME = "user-portfolio-service"
+        SERVICE_NAME_WORKER = "user-portfolio-service-worker"
+        SERVICE_NAME_NGINX = "user-portfolio-service-ngnix"
+        IMAGE_NAME = "891377240785.dkr.ecr.ap-south-1.amazonaws.com/youtrade-uat"
+        YAML_FILE_PATH = "."
+        BB_REPO = "user-portfolio-service"
+        POSTGRES_USER = "myuser"
+        POSTGRES_PASSWORD = "mypassword"
+        POSTGRES_DB = "mydatabase"
+        GIT_REPO_URL = "https://bitbucket.org/bwbucket/user-portfolio-service.git"
+
+    }
+
+    stages {
+        stage('Setup PostgreSQL') {
+            when { expression { return params.RUN_TESTS } }
+            steps {
+                script {
+                    def pgContainerName = "pg-test-container"
+                    def networkName = "test-net-${env.BUILD_ID}"
+                    sh "docker network create ${networkName} || true"
+                    sh """
+                        docker run -d \
+                        --name ${pgContainerName} \
+                        --network ${networkName} \
+                        -e POSTGRES_USER=${POSTGRES_USER} \
+                        -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} \
+                        -e POSTGRES_DB=${POSTGRES_DB} \
+                        postgres:13
+                    """
+                }
+            }
+        }
+
+        stage('Run Tests inside Docker') {
+            when { expression { return params.RUN_TESTS } }
+            steps {
+                script {
+                    def testContainerName = "test-container-${env.BUILD_ID}"
+                    def networkName = "test-net-${env.BUILD_ID}"
+                    def modifiedWorkspace = "${WORKSPACE}".replaceAll("/var/jenkins_home/workspace/", "/home/ubuntu/jenkins-data/jenkins_home/workspace/")
+                    sh "sleep 15"
+                    sh """
+                        docker pull python:3.10
+                        docker run --rm \
+                        --name ${testContainerName} \
+                        --network ${networkName} \
+                        --env-file /var/jenkins_home/service-secrets/user-portfolio-service \
+                        -v ${modifiedWorkspace}:/app \
+                        -w /app python:3.10 /bin/sh -c "pip install --upgrade pip && pip install -r requirements.txt && coverage run --source='.' manage.py test && coverage html"
+                    """
+                }
+            }
+            post {
+                always {
+                    script {
+                        sh "docker rm -f pg-test-container || true"
+                        sh "docker network rm test-net-${env.BUILD_ID} || true"
+                    }
+                }
+                success {
+                    script {
+                        def reportContent = readFile('htmlcov/index.html')
+                        emailext (
+                            subject: "${SERVICE_NAME} tests were successful",
+                            body: """${reportContent}""",
+                            mimeType: 'text/html',
+                            to: 'prometheus@bridgeweave.com',
+                            attachmentsPattern: '**/htmlcov/index.html'
+                        )
+                    }
+                }
+                failure {
+                    script {
+                        def reportContent = readFile('htmlcov/index.html')
+                        emailext (
+                            subject: "${SERVICE_NAME} tests failed",
+                            body: """${reportContent}""",
+                            mimeType: 'text/html',
+                            to: 'prometheus@bridgeweave.com',
+                            attachmentsPattern: '**/htmlcov/index.html'
+                        )
+                    }
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            when { expression { return params.RUN_SONAR } }
+            steps {
+                script {
+                    def scannerHome = tool 'SonarQubeScanner-6.1.0.44'
+                    withSonarQubeEnv() {
+                        sh "${scannerHome}/bin/sonar-scanner"
+                    }
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                sh "sudo docker build -t ${IMAGE_NAME}:${SERVICE_NAME}-uat-${CURR_VER} -f Dockerfile ."
+                sh "sudo docker build -t ${IMAGE_NAME}:${SERVICE_NAME_WORKER}-uat-${CURR_VER} -f Dockerfileworker ."
+                sh "sudo docker build -t ${IMAGE_NAME}:${SERVICE_NAME_NGINX}-uat-${CURR_VER} -f ./configurations/nginx/Dockerfile ."
+            }
+        }
+
+        stage('Clean Images') {
+            steps {
+                sh "sudo docker rmi ${IMAGE_NAME}:${SERVICE_NAME}-uat-${PRE_VER} || true"
+                sh "sudo docker rmi ${IMAGE_NAME}:${SERVICE_NAME_WORKER}-uat-${PRE_VER} || true"
+                sh "sudo docker rmi ${IMAGE_NAME}:${SERVICE_NAME_NGINX}-uat-${PRE_VER} || true"
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                sh "sudo aws ecr get-login-password --region ap-south-1 --profile ${AWS_PROFILE} | sudo docker login --username AWS --password-stdin ${IMAGE_NAME}"
+                sh "sudo docker push ${IMAGE_NAME}:${SERVICE_NAME}-uat-${CURR_VER}"
+                sh "sudo docker push ${IMAGE_NAME}:${SERVICE_NAME_WORKER}-uat-${CURR_VER}"
+                sh "sudo docker push ${IMAGE_NAME}:${SERVICE_NAME_NGINX}-uat-${CURR_VER}"
+            }
+        }
+
+        stage('Update Kubernetes YAMLs') {
+            steps {
+                sh """
+                    sed -i 's|image: .*|image: ${IMAGE_NAME}:${SERVICE_NAME}-uat-${CURR_VER}|' ${YAML_FILE_PATH}/${SERVICE_NAME}-uat-blue-green.yaml
+                    sed -i 's|image: .*|image: ${IMAGE_NAME}:${SERVICE_NAME_NGINX}-uat-${CURR_VER}|' ${YAML_FILE_PATH}/${SERVICE_NAME_NGINX}-uat-blue-green.yaml
+                    sed -i -E "s|(image: ${IMAGE_NAME}:.+-uat-)[0-9]+|\\1${CURR_VER}|" ${YAML_FILE_PATH}/user-portfolio-service-beat-worker-blue-green.yaml
+                """
+            }
+        }
+
+        stage('Commit and Push YAMLs to Git') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'bwbucket', usernameVariable: 'BB_USER', passwordVariable: 'BB_PASS')]) {
+                    sh """
+                        git checkout -B uat origin/uat
+                        git config user.name "bwbucket"
+                        git config user.email "bwdevops@bridgeweave.com"
+
+                        git add ${YAML_FILE_PATH}/${SERVICE_NAME}-uat-blue-green.yaml
+                        git add ${YAML_FILE_PATH}/${SERVICE_NAME_NGINX}-uat-blue-green.yaml
+                        git add ${YAML_FILE_PATH}/user-portfolio-service-beat-worker-blue-green.yaml
+
+                        git commit -m "Update rollout manifests for ${SERVICE_NAME}-uat-${CURR_VER}" || echo "Nothing to commit"
+
+                        export GIT_ASKPASS=/tmp/git-askpass.sh
+                        echo '#!/bin/sh' > \$GIT_ASKPASS
+                        echo 'echo \"${BB_PASS}\"' >> \$GIT_ASKPASS
+                        chmod +x \$GIT_ASKPASS
+
+                        git push https://${BB_USER}@bitbucket.org/bwbucket/${BB_REPO}.git uat || echo "Push failed or already up-to-date"
+
+                        rm -f \$GIT_ASKPASS
+                    """
+                }
+            }
+        }
+    }
+}
