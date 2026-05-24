@@ -9,7 +9,6 @@ from apps.portfolio.models import UserPortfolio, UserPortfolioRebalance, UserIns
 from multitenant.tenant_context import inject_tenant
 from multitenant.tenantawareadmin import TenantAwareModelAdmin
 from multitenant.admin_site import tenant_admin_site
-from apps.portfolio.constants import USER_PORTFOLIO
 
 
 # Register your models here.
@@ -22,7 +21,7 @@ class UserPortfolioAdminModel(TenantAwareModelAdmin):
                     'user_id', 'name', 'portfolio_id', 'product_type', 'strategy', 'broker', 'status', 'deactivated_reason', 'proxy', 'proxy_id',
                     "expected_investment", 'invested_amount', 'mtf_invested_amount', 'remaining_amount',
                     "average_leverage",
-                    'subscription_id', 'user_portfolio_rebalances', 'user_portfolio_thresholds', 'holdings', 'transactions')
+                    'subscription_id', 'user_portfolio_rebalances', 'holdings', 'transactions')
     list_filter = ('user_id', 'name', 'portfolio_id', 'broker', 'proxy', 'product_type', 'strategy')
     search_fields = ('user_id', 'portfolio_id', 'broker')
 
@@ -45,19 +44,6 @@ class UserPortfolioAdminModel(TenantAwareModelAdmin):
         return format_html("<a href='{url}' target='_blank'>{text}</a>",
                            url=link_url,
                            text='User Portfolio Rebalance')
-
-    def user_portfolio_thresholds(self, obj):
-        """
-        Generates an HTML link to the User Portfolio Threshold page for the given portfolio.
-
-        Filters the changelist by the current portfolio's type and ID to show only relevant thresholds.
-        """
-        url_name = 'tenant_admin:alerts_userportfoliothreshold_changelist'
-        link_url = reverse(url_name)
-        link_url += f"?portfolio_type={USER_PORTFOLIO}&portfolio_id={str(obj.id)}"
-        return format_html("<a href='{url}' target='_blank'>{text}</a>",
-                           url=link_url,
-                           text='User Portfolio Threshold')
 
     def holdings(self, obj):
         """

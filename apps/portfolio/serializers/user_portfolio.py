@@ -7,11 +7,8 @@ from django.db.models import Q
 from rest_framework import serializers
 
 from apps.holdings.models import Holding, Position
-from apps.portfolio.constants import CashTransaction, RebalanceTypes, RebalanceTransactionStates, ProductTypes, Strategy, Side, USER_PORTFOLIO
+from apps.portfolio.constants import CashTransaction, RebalanceTypes, RebalanceTransactionStates, ProductTypes, Strategy, Side
 from apps.portfolio.models.user_portfolio import UserPortfolio
-from apps.alerts.models import UserPortfolioThreshold
-from apps.alerts.constants import Status, PortfolioThresholdTypes
-from apps.alerts.serializers.user_portfolio_threshold import UserPortfolioThresholdReadSerializer
 from apps.portfolio.serializers.user_portfolio_rebalance import ReadUserPortfolioRebalanceSerializer
 
 logger = logging.getLogger(__name__)
@@ -48,7 +45,6 @@ class ReadUserPortfolioSerializer(serializers.ModelSerializer):
     """
     latest_rebalance = serializers.SerializerMethodField()
     sell_instructions = serializers.SerializerMethodField()
-    user_portfolio_threshold = serializers.SerializerMethodField()
 
     def get_latest_rebalance(self, obj):
         """
@@ -201,48 +197,6 @@ class ReadUserPortfolioSerializer(serializers.ModelSerializer):
         # logger.info("Sell instructions fetched for portfolio: %s", portfolio.id)
         return serialized_instructions
 
-    def get_user_portfolio_threshold(self, obj):
-        """
-        Return details of the related ACTIVE user portfolio threshold (Profit Target),
-        with `target_pct` renamed to `profit_target_1`.
-        """
-        try:
-            thresholds = self.context.get("thresholds")
-            # Filter thresholds in Python to avoid extra query
-            if thresholds:
-                matching_thresholds = [
-                    t for t in thresholds
-                    if (t.portfolio_type == USER_PORTFOLIO and
-                        t.portfolio_id == str(obj.id) and
-                        t.status == Status.ACTIVE and
-                        t.threshold_type == PortfolioThresholdTypes.PROFIT_TARGET)
-                ]
-            else:
-                matching_thresholds = (
-                    UserPortfolioThreshold.objects
-                    .filter(
-                        portfolio_type=USER_PORTFOLIO,
-                        portfolio_id=str(obj.id),
-                        status=Status.ACTIVE,
-                        threshold_type=PortfolioThresholdTypes.PROFIT_TARGET,
-                    )
-                    .order_by('-effective_from', '-id')
-                )
-
-
-            if not matching_thresholds:
-                return {}
-
-            # Sort by effective_from (desc), then id (desc) to match order_by behavior
-            threshold = max(matching_thresholds, key=lambda t: (t.effective_from, t.id))
-
-            data = UserPortfolioThresholdReadSerializer(instance=threshold).data
-            return data
-        except Exception as exc:
-            logger.info("Error fetching active user portfolio threshold for portfolio %s", obj.id)
-            logger.exception(exc)
-            return {}
-
     class Meta:
         model = UserPortfolio
         fields = [
@@ -266,7 +220,6 @@ class ReadUserPortfolioSerializer(serializers.ModelSerializer):
             "mtf_invested_amount",
             "average_leverage",
             "investment_date",
-            "user_portfolio_threshold",
         ]
 
 
@@ -277,7 +230,6 @@ class ReadUserPortfolioSerializerJTE(serializers.ModelSerializer):
     """
     latest_rebalance = serializers.SerializerMethodField()
     sell_instructions = serializers.SerializerMethodField()
-    user_portfolio_threshold = serializers.SerializerMethodField()
     holdings = serializers.SerializerMethodField()
     rebalances = serializers.SerializerMethodField()
 
@@ -432,48 +384,6 @@ class ReadUserPortfolioSerializerJTE(serializers.ModelSerializer):
         # logger.info("Sell instructions fetched for portfolio: %s", portfolio.id)
         return serialized_instructions
 
-    def get_user_portfolio_threshold(self, obj):
-        """
-        Return details of the related ACTIVE user portfolio threshold (Profit Target),
-        with `target_pct` renamed to `profit_target_1`.
-        """
-        try:
-            thresholds = self.context.get("thresholds")
-            # Filter thresholds in Python to avoid extra query
-            if 'thresholds' in self.context:
-                matching_thresholds = [
-                    t for t in thresholds
-                    if (t.portfolio_type == USER_PORTFOLIO and
-                        t.portfolio_id == str(obj.id) and
-                        t.status == Status.ACTIVE and
-                        t.threshold_type == PortfolioThresholdTypes.PROFIT_TARGET)
-                ]
-            else:
-                matching_thresholds = (
-                    UserPortfolioThreshold.objects
-                    .filter(
-                        portfolio_type=USER_PORTFOLIO,
-                        portfolio_id=str(obj.id),
-                        status=Status.ACTIVE,
-                        threshold_type=PortfolioThresholdTypes.PROFIT_TARGET,
-                    )
-                    .order_by('-effective_from', '-id')
-                )
-
-
-            if not matching_thresholds:
-                return {}
-
-            # Sort by effective_from (desc), then id (desc) to match order_by behavior
-            threshold = max(matching_thresholds, key=lambda t: (t.effective_from, t.id))
-
-            data = UserPortfolioThresholdReadSerializer(instance=threshold).data
-            return data
-        except Exception as exc:
-            logger.info("Error fetching active user portfolio threshold for portfolio %s", obj.id)
-            logger.exception(exc)
-            return {}
-
     def get_holdings(self, obj):
         res=[]
         for holding in obj.holdings.all():
@@ -517,7 +427,6 @@ class ReadUserPortfolioSerializerJTE(serializers.ModelSerializer):
             "mtf_invested_amount",
             "average_leverage",
             "investment_date",
-            "user_portfolio_threshold",
             "holdings",
             "rebalances",
         ]

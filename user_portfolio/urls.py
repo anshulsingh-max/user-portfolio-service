@@ -47,7 +47,6 @@ urlpatterns = [
     path(f'{settings.APP_PREFIX}/grappelli/', include('grappelli.urls')),
     path(f'{settings.APP_PREFIX}/holding/', include('apps.holdings.urls')),
     path(f'{settings.APP_PREFIX}/userportfolio/', include('apps.portfolio.urls')),
-    path(f'{settings.APP_PREFIX}/alerts/', include('apps.alerts.urls')),
     path(f'{settings.APP_PREFIX}/health_check/', include('health_check.urls')),
     # path(f'{settings.APP_PREFIX}/swagger/', SchemaView.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     # re_path(f'{settings.APP_PREFIX}/redoc/', SchemaView.with_ui('redoc', cache_timeout=0), name='schema-redoc'),

@@ -29,17 +29,7 @@ class HoldingAdminModel(TenantAwareModelAdmin):
     def value(self, obj):
         return obj.quantity * obj.avg_buy_price
 
-    def holding_thresholds(self, obj):
-        """Link to Holding Thresholds for this holding."""
-        url_name = 'tenant_admin:alerts_holdingthreshold_changelist'
-        link_url = reverse(url_name)
-        link_url += f"?holding_type=Security&holding_id={obj.id}"
-        return format_html("<a href='{url}' target='_blank'>{text}</a>",
-                           url=link_url,
-                           text='Holding Thresholds')
-
-    list_display = ('id', 'created', 'modified', 'user_portfolio', 'symbol', 'quantity', 'avg_buy_price', 'value',
-                    'holding_thresholds')
+    list_display = ('id', 'created', 'modified', 'user_portfolio', 'symbol', 'quantity', 'avg_buy_price', 'value')
     list_filter = ('symbol',)
     search_fields = ('symbol',)
 
