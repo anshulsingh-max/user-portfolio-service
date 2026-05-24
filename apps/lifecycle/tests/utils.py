@@ -15,10 +15,12 @@ from apps.portfolio.constants import (
     BrokerEnum,
     CashTransaction,
     OrderCurrentStatus,
+    OrderStatus,
     ProductTypes,
     RebalanceTransactionStates,
     RebalanceTransactionTypes,
     RebalanceTypes,
+    Side,
     States,
 )
 from apps.portfolio.models import (
@@ -62,13 +64,14 @@ class LifecycleSignalIsolationMixin:
 
 def create_user_portfolio(**overrides: object) -> UserPortfolio:
     """Create a minimal portfolio parent for rebalance fixtures."""
+    suffix = UserPortfolio.objects.count() + 1
     values = {
-        "user_id": "user-1",
+        "user_id": f"user-{suffix}",
         "broker": BrokerEnum.PAPER_TRADE.value,
         "name": "Lifecycle Test Portfolio",
-        "portfolio_id": "portfolio-1",
+        "portfolio_id": f"portfolio-{suffix}",
         "product_type": ProductTypes.EQUITY.value,
-        "subscription_id": "subscription-1",
+        "subscription_id": f"subscription-{suffix}",
     }
     values.update(overrides)
     return UserPortfolio.objects.create(**values)
@@ -76,8 +79,11 @@ def create_user_portfolio(**overrides: object) -> UserPortfolio:
 
 def create_rebalance(**overrides: object) -> UserPortfolioRebalance:
     """Create a minimal rebalance event fixture."""
+    user_portfolio = overrides.pop("user_portfolio", None)
+    if user_portfolio is None:
+        user_portfolio = create_user_portfolio()
     values = {
-        "user_portfolio": create_user_portfolio(),
+        "user_portfolio": user_portfolio,
         "type": RebalanceTypes.INITIAL.value,
         "states": [],
         "current_state": overrides.pop(
@@ -94,8 +100,11 @@ def create_phase(
     **overrides: object,
 ) -> PortfolioRebalanceTransaction:
     """Create a minimal rebalance transaction phase fixture."""
+    portfolio_rebalance = overrides.pop("portfolio_rebalance", None)
+    if portfolio_rebalance is None:
+        portfolio_rebalance = create_rebalance()
     values = {
-        "portfolio_rebalance": create_rebalance(),
+        "portfolio_rebalance": portfolio_rebalance,
         "type": RebalanceTransactionTypes.INITIAL.value,
         "current_state": overrides.pop(
             "current_state",
@@ -129,8 +138,11 @@ def create_basket(**overrides: object) -> Basket:
 
 def create_order(**overrides: object) -> Order:
     """Create a minimal order fixture."""
+    basket = overrides.pop("basket", None)
+    if basket is None:
+        basket = create_basket()
     values = {
-        "basket": create_basket(),
+        "basket": basket,
         "trading_symbol": "ABC",
         "current_status": overrides.pop(
             "current_status",
@@ -141,3 +153,42 @@ def create_order(**overrides: object) -> Order:
     }
     values.update(overrides)
     return Order.objects.create(**values)
+
+
+def create_user_instruction(**overrides: object) -> UserInstruction:
+    """Create a minimal rebalance instruction fixture."""
+    phase = overrides.pop("portfolio_rebalance_transaction", None)
+    if phase is None:
+        phase = create_phase()
+    values = {
+        "portfolio_rebalance_transaction": phase,
+        "order_tag": "user-instruction-1",
+        "symbol": "ABC",
+        "quantity": 10,
+        "filled_quantity": 0,
+        "side": Side.BUY.value,
+        "value": 0,
+        "status": OrderStatus.WAITING.value,
+    }
+    values.update(overrides)
+    return UserInstruction.objects.create(**values)
+
+
+def create_order_instruction(**overrides: object) -> OrderInstruction:
+    """Create a minimal basket order instruction fixture."""
+    order = overrides.pop("order", None)
+    if order is None:
+        order = create_order()
+    values = {
+        "order": order,
+        "order_tag": "order-instruction-1",
+        "symbol": "ABC",
+        "quantity": 10,
+        "filled_quantity": 0,
+        "order_price": 0,
+        "side": Side.BUY.value,
+        "value": 0,
+        "status": OrderStatus.WAITING.value,
+    }
+    values.update(overrides)
+    return OrderInstruction.objects.create(**values)

@@ -1,11 +1,15 @@
-"""
-Service layer that converts a *completed* ``UserPortfolioRebalance`` instance
-into a live :class:`~apps.portfolio.models.Basket` (``monitoring`` state) and
-boot-straps all dependent :class:`~apps.portfolio.models.Order` &
+"""Convert a completed rebalance into basket monitoring records.
+
+Service layer that converts a *completed* ``UserPortfolioRebalance`` into a
+live :class:`~apps.portfolio.models.Basket` and boot-straps all dependent
+:class:`~apps.portfolio.models.Order` and
 :class:`~apps.portfolio.models.OrderInstruction` rows.
 
-It is invoked by the ``post_save`` signal in ``apps.portfolio.signals`` once a
-rebalance's ``current_state`` becomes ``complete``.
+**Currently not wired** - there is no caller. The unification plan section
+7.8 specifies this function will be invoked as an explicit transition hook
+from ``TransitionService._schedule_side_effects`` when
+``UserPortfolioRebalance`` transitions to ``complete``. That wiring lands in
+a later Phase 1 pass.
 """
 
 from __future__ import annotations
